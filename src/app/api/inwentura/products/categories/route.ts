@@ -1,51 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { NextResponse } from 'next/server';
+import { ProductService } from '@/lib/inwentura/productService';
 
 export async function GET() {
   try {
-    // Get unique categories from products
-    const categories = await db.product.findMany({
-      select: {
-        category: true
-      },
-      distinct: ['category'],
-      orderBy: {
-        category: 'asc'
-      }
-    });
-    
-    const categoryList = categories.map(c => c.category);
-    
-    // If no categories exist, return default ones
-    if (categoryList.length === 0) {
-      const defaultCategories = [
-        'Nabiał',
-        'Pieczywo',
-        'Owoce',
-        'Warzywa',
-        'Mięso',
-        'Napoje',
-        'Słodycze',
-        'Przyprawy',
-        'Mrożonki',
-        'Inne'
-      ];
-      
-      return NextResponse.json({
-        success: true,
-        data: defaultCategories
-      });
-    }
-    
-    return NextResponse.json({
-      success: true,
-      data: categoryList
-    });
-    
+    const categories = await ProductService.getCategories();
+    return NextResponse.json(categories);
+
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('Error getting categories:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to get categories' },
       { status: 500 }
     );
   }

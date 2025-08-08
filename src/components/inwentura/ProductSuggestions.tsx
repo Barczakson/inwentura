@@ -5,10 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, AlertCircle, Database, RefreshCw } from 'lucide-react';
+import { Search, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import { Product, Unit } from '@/types/inwentura';
-import { fuzzySearch, debounce } from '@/lib/inwentura/fuzzySearch';
-import { googleSheetsService, isGoogleSheetsConfigured, mockProducts } from '@/lib/inwentura/googleSheets';
+
+interface ProductSuggestion {
+  id: string;
+  name: string;
+  category: string;
+  defaultUnit: string;
+  frequency?: number;
+  score?: number;
+}
 
 interface ProductSuggestionsProps {
   value: string;
@@ -27,71 +34,49 @@ export default function ProductSuggestions({
   placeholder = "np. jabłko",
   disabled = false
 }: ProductSuggestionsProps) {
-  const [suggestions, setSuggestions] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [useGoogleSheets, setUseGoogleSheets] = useState(isGoogleSheetsConfigured());
-  const [isLoadingFromSheets, setIsLoadingFromSheets] = useState(false);
-  const [sheetsError, setSheetsError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [popularProducts, setPopularProducts] = useState<ProductSuggestion[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load all products on mount
+  // Load categories and popular products on mount
   useEffect(() => {
-    loadProducts();
+    loadCategories();
+    loadPopularProducts();
   }, []);
 
-  const loadProducts = async () => {
-    setIsLoadingFromSheets(true);
-    setSheetsError(null);
-    
+  const loadCategories = async () => {
     try {
-      // Check cache first
-      const cached = localStorage.getItem('products_cache');
-      const cacheTime = localStorage.getItem('products_cache_time');
-      
-      // Use cache if it's less than 24 hours old
-      if (cached && cacheTime) {
-        const cacheAge = Date.now() - parseInt(cacheTime);
-        if (cacheAge < 24 * 60 * 60 * 1000) { // 24 hours
-          setAllProducts(JSON.parse(cached));
-          setIsLoadingFromSheets(false);
-          return;
-        }
-      }
-      
-      // Try to load from Google Sheets
-      if (useGoogleSheets) {
-        const products = await googleSheetsService.fetchProducts();
-        if (products.length > 0) {
-          setAllProducts(products);
-          // Save to cache
-          localStorage.setItem('products_cache', JSON.stringify(products));
-          localStorage.setItem('products_cache_time', Date.now().toString());
-          return;
-        }
-      }
-      
-      // Fallback to mock products if Google Sheets is not configured or empty
-      setAllProducts(mockProducts);
-      if (useGoogleSheets) {
-        setSheetsError('Google Sheets jest pusty lub niedostępny. Używam produktów przykładowych.');
+      const response = await fetch('/api/inwentura/products/categories');
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
       }
     } catch (error) {
-      console.error('Failed to load products from Google Sheets:', error);
-      setSheetsError('Błąd ładowania produktów z Google Sheets. Używam produktów przykładowych.');
-      setAllProducts(mockProducts);
-    } finally {
-      setIsLoadingFromSheets(false);
+      console.error('Failed to load categories:', error);
+    }
+  };
+
+  const loadPopularProducts = async () => {
+    try {
+      const response = await fetch('/api/inwentura/products/popular?limit=10');
+      if (response.ok) {
+        const data = await response.json();
+        setPopularProducts(data);
+      }
+    } catch (error) {
+      console.error('Failed to load popular products:', error);
     }
   };
 
   // Debounced search function
   const debouncedSearch = useCallback(
-    debounce((query: string) => {
+    debounce(async (query: string) => {
       if (!query.trim()) {
         setSuggestions([]);
         setShowSuggestions(false);
@@ -100,17 +85,25 @@ export default function ProductSuggestions({
 
       setIsLoading(true);
       
-      // Perform fuzzy search
-      const results = fuzzySearch(query, allProducts, {
-        threshold: 0.3,
-        maxResults: 8
-      });
-      
-      setSuggestions(results.map(r => r.product));
-      setShowSuggestions(true);
-      setIsLoading(false);
+      try {
+        const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(query)}&limit=8`);
+        if (response.ok) {
+          const data = await response.json();
+          setSuggestions(data);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch (error) {
+        console.error('Failed to search products:', error);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsLoading(false);
+      }
     }, 300),
-    [allProducts]
+    []
   );
 
   useEffect(() => {
@@ -176,15 +169,14 @@ export default function ProductSuggestions({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (product: Product) => {
+  const handleSelect = (product: ProductSuggestion) => {
     onChange(product.name);
-    onSelect(product);
-    
-    // Update frequency if using Google Sheets
-    if (useGoogleSheets) {
-      googleSheetsService.updateProductFrequency(product.id, (product.frequency || 0) + 1)
-        .catch(error => console.error('Failed to update frequency:', error));
-    }
+    onSelect({
+      id: product.id,
+      name: product.name,
+      category: product.category,
+      defaultUnit: product.defaultUnit as Unit
+    });
     
     setShowSuggestions(false);
     setSelectedIndex(-1);
@@ -193,28 +185,28 @@ export default function ProductSuggestions({
   const handleAddNew = async () => {
     if (value.trim() && onAddNew) {
       try {
-        if (useGoogleSheets) {
-          // Try to add to Google Sheets first
-          const newProduct = await googleSheetsService.addProduct({
+        // Add the new product to the database
+        const response = await fetch('/api/inwentura/products/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             name: value.trim(),
             category: 'Inne', // Default category
-            defaultUnit: 'szt', // Default unit
-            frequency: 1
-          });
-          
-          // Update local state and cache
-          const updatedProducts = [...allProducts, newProduct];
-          setAllProducts(updatedProducts);
-          localStorage.setItem('products_cache', JSON.stringify(updatedProducts));
-          localStorage.setItem('products_cache_time', Date.now().toString());
-          
+            defaultUnit: 'szt' // Default unit
+          }),
+        });
+
+        if (response.ok) {
+          const newProduct = await response.json();
           onAddNew(newProduct);
         } else {
           // Fallback to local handling
           onAddNew(value.trim());
         }
       } catch (error) {
-        console.error('Failed to add product to Google Sheets:', error);
+        console.error('Failed to add product:', error);
         // Fallback to local handling
         onAddNew(value.trim());
       }
@@ -225,41 +217,7 @@ export default function ProductSuggestions({
   };
 
   const handleRefreshProducts = async () => {
-    setIsLoadingFromSheets(true);
-    setSheetsError(null);
-    
-    try {
-      if (useGoogleSheets) {
-        const products = await googleSheetsService.fetchProducts();
-        if (products.length > 0) {
-          setAllProducts(products);
-          // Update cache
-          localStorage.setItem('products_cache', JSON.stringify(products));
-          localStorage.setItem('products_cache_time', Date.now().toString());
-        } else {
-          setSheetsError('Google Sheets jest pusty. Używam produktów przykładowych.');
-          setAllProducts(mockProducts);
-        }
-      } else {
-        setAllProducts(mockProducts);
-      }
-    } catch (error) {
-      console.error('Failed to refresh products:', error);
-      setSheetsError('Błąd odświeżania produktów z Google Sheets.');
-      setAllProducts(mockProducts);
-    } finally {
-      setIsLoadingFromSheets(false);
-    }
-  };
-
-  const toggleDataSource = () => {
-    const newValue = !useGoogleSheets;
-    setUseGoogleSheets(newValue);
-    if (newValue && isGoogleSheetsConfigured()) {
-      handleRefreshProducts();
-    } else {
-      setAllProducts(mockProducts);
-    }
+    await loadPopularProducts();
   };
 
   const canAddNew = value.trim() && !suggestions.some(p => 
@@ -271,60 +229,24 @@ export default function ProductSuggestions({
       {/* Data source info panel */}
       <div className="flex items-center justify-between mb-2 p-2 bg-muted rounded-lg">
         <div className="flex items-center space-x-2">
-          <Database className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">
-            {useGoogleSheets ? 'Google Sheets' : 'Produkty lokalne'}
+            Baza danych produktów
           </span>
-          {isGoogleSheetsConfigured() && (
-            <Badge variant={useGoogleSheets ? "default" : "secondary"} className="text-xs">
-              {useGoogleSheets ? "Aktywny" : "Nieaktywny"}
-            </Badge>
-          )}
+          <Badge variant="default" className="text-xs">
+            Aktywny
+          </Badge>
         </div>
         <div className="flex items-center space-x-2">
-          {isGoogleSheetsConfigured() && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleDataSource}
-              className="h-6 px-2 text-xs"
-            >
-              {useGoogleSheets ? 'Użyj lokalnych' : 'Użyj Sheets'}
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"
             onClick={handleRefreshProducts}
-            disabled={isLoadingFromSheets}
             className="h-6 px-2"
           >
-            <RefreshCw className={`h-3 w-3 ${isLoadingFromSheets ? 'animate-spin' : ''}`} />
+            <RefreshCw className="h-3 w-3" />
           </Button>
         </div>
       </div>
-
-      {/* Error message */}
-      {sheetsError && (
-        <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <span className="text-sm text-yellow-800">{sheetsError}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Configuration warning */}
-      {!isGoogleSheetsConfigured() && (
-        <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-            <span className="text-sm text-blue-800">
-              Google Sheets nie jest skonfigurowany. Używam produktów przykładowych.
-            </span>
-          </div>
-        </div>
-      )}
 
       <div className="relative">
         <Input
@@ -371,9 +293,11 @@ export default function ProductSuggestions({
                             {product.category} • domyślnie: {product.defaultUnit}
                           </div>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {product.frequency || 0}x
-                        </Badge>
+                        {product.score && (
+                          <Badge variant="secondary" className="text-xs">
+                            {Math.round(product.score)}%
+                          </Badge>
+                        )}
                       </div>
                     </button>
                   );
@@ -397,8 +321,29 @@ export default function ProductSuggestions({
                 )}
               </div>
             ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                Wpisz nazwę produktu, aby zobaczyć sugestie
+              <div className="p-4">
+                <div className="mb-3">
+                  <h4 className="font-medium text-sm mb-2">Popularne produkty:</h4>
+                  <div className="space-y-1">
+                    {popularProducts.slice(0, 5).map((product) => (
+                      <button
+                        key={product.id}
+                        onClick={() => handleSelect(product)}
+                        className="w-full text-left px-2 py-1 hover:bg-accent rounded text-sm transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{product.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {product.frequency || 0}x
+                          </Badge>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-center text-muted-foreground text-xs">
+                  Wpisz nazwę produktu, aby zobaczyć sugestie
+                </div>
               </div>
             )}
           </CardContent>
@@ -406,4 +351,13 @@ export default function ProductSuggestions({
       )}
     </div>
   );
+}
+
+// Simple debounce function
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  }) as T;
 }

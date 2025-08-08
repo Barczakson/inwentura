@@ -56,8 +56,23 @@ export default function InwenturaApp() {
       setIsAuthenticated(true);
       loadInventory();
       loadCategories();
+      initializeProductsIfNeeded();
     }
   }, []);
+
+  // Initialize sample products if needed
+  const initializeProductsIfNeeded = async () => {
+    try {
+      // Check if we have products by trying to get popular ones
+      const response = await fetch('/api/inwentura/products/popular?limit=1');
+      if (!response.ok || (await response.json()).length === 0) {
+        // No products found, initialize sample data
+        await fetch('/api/inwentura/products/initialize', { method: 'POST' });
+      }
+    } catch (error) {
+      console.error('Error checking/initializing products:', error);
+    }
+  };
 
   // Auto-save every 30 seconds
   useEffect(() => {
@@ -87,11 +102,21 @@ export default function InwenturaApp() {
 
   const loadCategories = async () => {
     try {
-      // Mock categories - in real app these could come from Google Sheets
-      const mockCategories = ['Owoce', 'Warzywa', 'Nabiał', 'Pieczywo', 'Mięso', 'Napoje', 'Przyprawy', 'Inne'];
-      setCategories(mockCategories);
+      // Load categories from API
+      const response = await fetch('/api/inwentura/products/categories');
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data);
+      } else {
+        // Fallback to mock categories
+        const mockCategories = ['Owoce', 'Warzywa', 'Nabiał', 'Pieczywo', 'Mięso', 'Napoje', 'Przyprawy', 'Inne'];
+        setCategories(mockCategories);
+      }
     } catch (err) {
       console.error('Failed to load categories:', err);
+      // Fallback to mock categories
+      const mockCategories = ['Owoce', 'Warzywa', 'Nabiał', 'Pieczywo', 'Mięso', 'Napoje', 'Przyprawy', 'Inne'];
+      setCategories(mockCategories);
     }
   };
 

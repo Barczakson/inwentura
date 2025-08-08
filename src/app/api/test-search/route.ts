@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     
-    console.log('Search API called with query:', JSON.stringify(query));
+    console.log('Test search API called with query:', JSON.stringify(query));
 
     // Return simple test data
     return NextResponse.json([
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     ]);
 
   } catch (error) {
-    console.error('Error in search API:', error);
+    console.error('Error in test search API:', error);
     return NextResponse.json(
       { error: 'Failed to search products', details: error.message },
       { status: 500 }
