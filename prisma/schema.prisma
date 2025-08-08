@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -28,7 +28,7 @@ model Product {
   id           String   @id @default(cuid())
   name         String   @unique
   category     String
-  defaultUnit  String   // kg, g, l, ml, szt
+  defaultUnit  Unit     // kg, g, l, ml, szt
   frequency    Int?     // Usage frequency counter
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -41,7 +41,7 @@ model InventoryItem {
   id         String   @id @default(cuid())
   productId  String
   weight     Float
-  unit       String   // kg, g, l, ml, szt
+  unit       Unit     // kg, g, l, ml, szt
   timestamp  DateTime @default(now())
   userId     String
   createdAt  DateTime @default(now())
@@ -67,4 +67,12 @@ model UserConfig {
   useSharedSheet     Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+enum Unit {
+  kg
+  g
+  l
+  ml
+  szt
 }

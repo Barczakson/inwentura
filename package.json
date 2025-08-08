@@ -12,7 +12,12 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.js",
+    "db:test": "tsx test-supabase.js",
+    "deploy:supabase": "node deploy-supabase.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {
