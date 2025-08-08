@@ -129,7 +129,7 @@ export default function InwenturaApp() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password: password.trim() }),
       });
       
       const data = await response.json();
