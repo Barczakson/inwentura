@@ -8,6 +8,9 @@ yarn-error.log*
 .next/
 out/
 
+# Custom server - ignore for Vercel deployment
+server.ts
+
 # Environment variables
 .env
 .env.local
@@ -34,6 +37,8 @@ Thumbs.db
 
 # Logs
 *.log
+dev.log
+server.log
 
 # Runtime data
 pids
@@ -104,3 +109,8 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Research files
+research_*.js
+*_GUIDE.md
+*_ANALYSIS.md

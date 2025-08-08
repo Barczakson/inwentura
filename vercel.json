@@ -1,12 +1,12 @@
 {
-  "buildCommand": "next build",
-  "installCommand": "npm install",
-  "framework": "nextjs",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
   "functions": {
-    "app/**/*.tsx": {
-      "maxDuration": 30
-    },
-    "app/**/*.ts": {
+    "app/api/**/*": {
       "maxDuration": 30
     }
   }
