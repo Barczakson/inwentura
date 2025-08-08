@@ -270,7 +270,11 @@ export class ProductService {
 
         if (!existing) {
           await db.product.create({
-            data: product
+            data: {
+              name: product.name.toLowerCase(),
+              category: product.category.toLowerCase(),
+              defaultUnit: product.defaultUnit
+            }
           });
         }
       }

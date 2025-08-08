@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { ProductService } from '@/lib/inwentura/productService';
 
 export async function GET(request: Request) {
   try {
@@ -7,17 +8,12 @@ export async function GET(request: Request) {
     
     console.log('Search API called with query:', JSON.stringify(query));
 
-    // Return simple test data
-    return NextResponse.json([
-      {
-        id: 'test-id',
-        name: 'Test Product',
-        category: 'Test Category',
-        defaultUnit: 'szt',
-        frequency: 1,
-        score: 100
-      }
-    ]);
+    if (!query.trim()) {
+      return NextResponse.json([]);
+    }
+
+    const results = await ProductService.searchProducts(query, 10);
+    return NextResponse.json(results);
 
   } catch (error) {
     console.error('Error in search API:', error);
