@@ -129,7 +129,7 @@ export default function InwenturaApp() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password: password.trim() }),
+        body: JSON.stringify({ password }),
       });
       
       const data = await response.json();
@@ -141,7 +141,11 @@ export default function InwenturaApp() {
         loadInventory();
         loadCategories();
       } else {
-        setError('Nieprawidłowe hasło');
+        if (data.configError) {
+          setError('Błąd konfiguracji serwera: Hasło nie zostało ustawione. Skontaktuj się z administratorem.');
+        } else {
+          setError('Nieprawidłowe hasło');
+        }
       }
     } catch (err) {
       setError('Wystąpił błąd podczas weryfikacji hasła');
