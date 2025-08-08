@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  inventoryItems InventoryItem[]
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  category     String
+  defaultUnit  String   // kg, g, l, ml, szt
+  frequency    Int?     // Usage frequency counter
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  inventoryItems InventoryItem[]
+}
+
+model InventoryItem {
+  id         String   @id @default(cuid())
+  productId  String
+  weight     Float
+  unit       String   // kg, g, l, ml, szt
+  timestamp  DateTime @default(now())
+  userId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Config {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserConfig {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  googleSheetsConfig String?  // JSON string
+  useSharedSheet     Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
