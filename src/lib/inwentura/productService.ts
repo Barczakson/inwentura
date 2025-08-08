@@ -33,8 +33,7 @@ export class ProductService {
       const exactMatches = await db.product.findMany({
         where: {
           name: {
-            contains: query,
-            mode: 'insensitive'
+            contains: query.toLowerCase()
           }
         },
         orderBy: [
@@ -64,14 +63,12 @@ export class ProductService {
           OR: [
             {
               name: {
-                contains: query,
-                mode: 'insensitive'
+                contains: query.toLowerCase()
               }
             },
             {
               category: {
-                contains: query,
-                mode: 'insensitive'
+                contains: query.toLowerCase()
               }
             }
           ]
@@ -107,8 +104,7 @@ export class ProductService {
       const existingProduct = await db.product.findFirst({
         where: {
           name: {
-            equals: name.toLowerCase(),
-            mode: 'insensitive'
+            equals: name.toLowerCase()
           }
         }
       });
@@ -267,8 +263,7 @@ export class ProductService {
         const existing = await db.product.findFirst({
           where: {
             name: {
-              equals: product.name,
-              mode: 'insensitive'
+              equals: product.name.toLowerCase()
             }
           }
         });
