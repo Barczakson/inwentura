@@ -119,17 +119,34 @@ export default function InwenturaApp() {
     saveInventory(inventory);
   };
 
-  const handleLogin = () => {
-    // Simple password protection - in production, use proper authentication
-    const appPassword = process.env.INWENTURA_PASSWORD || 'inwentura123';
-    if (password === appPassword) {
-      localStorage.setItem('inwentura_auth', 'authenticated');
-      setIsAuthenticated(true);
-      setShowPasswordDialog(false);
-      loadInventory();
-      loadCategories();
-    } else {
-      setError('Nieprawidłowe hasło');
+  const handleLogin = async () => {
+    setIsProcessing(true);
+    setError('');
+    
+    try {
+      const response = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        localStorage.setItem('inwentura_auth', 'authenticated');
+        setIsAuthenticated(true);
+        setShowPasswordDialog(false);
+        loadInventory();
+        loadCategories();
+      } else {
+        setError('Nieprawidłowe hasło');
+      }
+    } catch (err) {
+      setError('Wystąpił błąd podczas weryfikacji hasła');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -375,8 +392,8 @@ export default function InwenturaApp() {
               </Alert>
             )}
             
-            <Button onClick={handleLogin} className="w-full">
-              Odblokuj aplikację
+            <Button onClick={handleLogin} className="w-full" disabled={isProcessing}>
+              {isProcessing ? 'Weryfikacja...' : 'Odblokuj aplikację'}
             </Button>
           </div>
         </DialogContent>

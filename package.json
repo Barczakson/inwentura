@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "nodemon --exec \"npx tsx server.ts\" --watch server.ts --watch src --ext ts,tsx,js,jsx 2>&1 | tee dev.log",
+    "dev": "next dev",
     "build": "prisma generate && next build",
     "build:vercel": "prisma generate && next build",
     "start": "next start",
