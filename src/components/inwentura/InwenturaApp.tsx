@@ -311,15 +311,32 @@ export default function InwenturaApp() {
       // Try to find product in database first
       let productData = null;
       try {
-        const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(product)}&limit=1`);
+        const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(product)}&limit=10`);
         if (response.ok) {
           const searchResults = await response.json();
           if (searchResults.length > 0) {
-            const foundProduct = searchResults.find((p: any) =>
+            // Try exact match first
+            let foundProduct = searchResults.find((p: any) =>
               p.name.toLowerCase() === product.toLowerCase()
             );
+
+            // If no exact match, try partial match (product name contains search term)
+            if (!foundProduct) {
+              foundProduct = searchResults.find((p: any) =>
+                p.name.toLowerCase().includes(product.toLowerCase())
+              );
+            }
+
+            // If still no match, try reverse (search term contains product name)
+            if (!foundProduct) {
+              foundProduct = searchResults.find((p: any) =>
+                product.toLowerCase().includes(p.name.toLowerCase().split(' ').pop() || '')
+              );
+            }
+
             if (foundProduct) {
               productData = foundProduct;
+              console.log(`Found product in database: ${foundProduct.name} (ID: ${foundProduct.id})`);
             }
           }
         }
