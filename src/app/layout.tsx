@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/inwentura/auth";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Inwentura - Zarządzanie inwentarzem",
@@ -58,10 +59,12 @@ export default function RootLayout({
         className="antialiased bg-background text-foreground"
       >
         <AuthProvider>
-          {children}
-          <Toaster />
+          <QueryProvider>
+            {children}
+            <Toaster />
+          </QueryProvider>
         </AuthProvider>
-        
+
         {/* Service Worker Registration */}
         <script
           dangerouslySetInnerHTML={{
@@ -77,18 +80,18 @@ export default function RootLayout({
                     });
                 });
               }
-              
+
               // Handle online/offline status
               window.addEventListener('online', () => {
                 document.body.classList.remove('offline');
                 console.log('App is online');
               });
-              
+
               window.addEventListener('offline', () => {
                 document.body.classList.add('offline');
                 console.log('App is offline');
               });
-              
+
               // Check initial status
               if (!navigator.onLine) {
                 document.body.classList.add('offline');

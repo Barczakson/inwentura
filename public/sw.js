@@ -12,6 +12,7 @@ const STATIC_CACHE_URLS = [
 // API endpoints that can be cached
 const API_CACHE_URLS = [
   '/api/inwentura/products/categories',
+  '/api/inwentura/products/popular',
   '/api/test-voice'
 ];
 

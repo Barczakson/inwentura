@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,38 +44,41 @@ export default function ProductSuggestions({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
-  // Load categories and popular products on mount
-  useEffect(() => {
-    loadCategories();
-    loadPopularProducts();
-  }, []);
+  // Query: Categories (cache 10 min, background revalidate)
+  useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/inwentura/products/categories');
+      if (!res.ok) throw new Error('Failed to load categories');
+      return (await res.json()) as string[];
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnMount: false,
+    onSuccess: (data) => setCategories(data),
+  });
 
-  const loadCategories = async () => {
-    try {
-      const response = await fetch('/api/inwentura/products/categories');
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data);
-      }
-    } catch (error) {
-      console.error('Failed to load categories:', error);
-    }
+  // Query: Popular products (cache 5 min)
+  useQuery({
+    queryKey: ['popular-products', 10],
+    queryFn: async () => {
+      const res = await fetch('/api/inwentura/products/popular?limit=10');
+      if (!res.ok) throw new Error('Failed to load popular products');
+      return (await res.json()) as ProductSuggestion[];
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnMount: false,
+    onSuccess: (data) => setPopularProducts(data),
+  });
+
+  const handleRefreshProducts = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['popular-products', 10] });
   };
 
-  const loadPopularProducts = async () => {
-    try {
-      const response = await fetch('/api/inwentura/products/popular?limit=10');
-      if (response.ok) {
-        const data = await response.json();
-        setPopularProducts(data);
-      }
-    } catch (error) {
-      console.error('Failed to load popular products:', error);
-    }
-  };
-
-  // Debounced search function
+  // Debounced search function using react-query cache for results reuse
   const debouncedSearch = useCallback(
     debounce(async (query: string) => {
       if (!query.trim()) {
@@ -84,17 +88,33 @@ export default function ProductSuggestions({
       }
 
       setIsLoading(true);
-      
+
       try {
-        const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(query)}&limit=8`);
-        if (response.ok) {
-          const data = await response.json();
-          setSuggestions(data);
+        const queryKey = ['search-products', query, 8] as const;
+        // Try cache first
+        const cached = queryClient.getQueryData<ProductSuggestion[]>(queryKey);
+        if (cached) {
+          setSuggestions(cached);
           setShowSuggestions(true);
-        } else {
-          setSuggestions([]);
-          setShowSuggestions(false);
+          setIsLoading(false);
+          // Revalidate in background
+          queryClient.invalidateQueries({ queryKey });
+          return;
         }
+
+        // Fetch and cache via queryClient
+        const data = await queryClient.fetchQuery({
+          queryKey,
+          queryFn: async () => {
+            const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(query)}&limit=8`);
+            if (!response.ok) throw new Error('Search request failed');
+            return (await response.json()) as ProductSuggestion[];
+          },
+          staleTime: 60 * 1000, // 1 min
+          gcTime: 30 * 60 * 1000,
+        });
+        setSuggestions(data);
+        setShowSuggestions(true);
       } catch (error) {
         console.error('Failed to search products:', error);
         setSuggestions([]);
@@ -103,7 +123,7 @@ export default function ProductSuggestions({
         setIsLoading(false);
       }
     }, 300),
-    []
+    [queryClient]
   );
 
   useEffect(() => {
@@ -216,9 +236,7 @@ export default function ProductSuggestions({
     }
   };
 
-  const handleRefreshProducts = async () => {
-    await loadPopularProducts();
-  };
+
 
   const canAddNew = value.trim() && !suggestions.some(p => 
     p.name.toLowerCase() === value.toLowerCase()

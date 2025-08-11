@@ -4,8 +4,12 @@ import { ProductService } from '@/lib/inwentura/productService';
 export async function GET() {
   try {
     const categories = await ProductService.getCategories();
-    return NextResponse.json(categories);
-
+    return new NextResponse(JSON.stringify(categories), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=600, stale-while-revalidate=1800',
+      },
+    });
   } catch (error) {
     console.error('Error getting categories:', error);
     return NextResponse.json(
