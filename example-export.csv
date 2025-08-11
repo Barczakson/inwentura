@@ -1,11 +1,11 @@
-L.p.,Nr indeksu,Nazwa towaru,JMZ
-PRODUKCJA,,,
-1,20014,Andruty,kg
-2,20016,Baileys,l
-3,20059,udziec wołowy,kg
-PÓŁPRODUKTY,,,
-4,11447,p. BESZAMEL SZPARAGOWY 1kg,kg
-5,2899,p. BOROWIK MARYNOWANY słoik 1kg,kg
-SUROWCE,,,
-6,1296,alkohol wino kuchnia,l
-7,117,nabiał jajka,szt
+L.p.,Nr indeksu,Nazwa towaru,Ilość,JMZ
+PRODUKCJA,,,,
+1,20014,Andruty,0.5,kg
+2,20016,Baileys,0.7,l
+3,20059,udziec wołowy,1,kg
+PÓŁPRODUKTY,,,,
+4,11447,p. BESZAMEL SZPARAGOWY 1kg,2.5,kg
+5,2899,p. BOROWIK MARYNOWANY słoik 1kg,1,kg
+SUROWCE,,,,
+6,1296,alkohol wino kuchnia,1.5,l
+7,117,nabiał jajka,12,szt

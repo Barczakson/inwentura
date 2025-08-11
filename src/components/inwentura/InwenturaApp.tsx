@@ -308,15 +308,34 @@ export default function InwenturaApp() {
         }
       }
 
+      // Try to find product in database first
+      let productData = null;
+      try {
+        const response = await fetch(`/api/inwentura/products/search?q=${encodeURIComponent(product)}&limit=1`);
+        if (response.ok) {
+          const searchResults = await response.json();
+          if (searchResults.length > 0) {
+            const foundProduct = searchResults.find((p: any) =>
+              p.name.toLowerCase() === product.toLowerCase()
+            );
+            if (foundProduct) {
+              productData = foundProduct;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Could not search for product in database:', error);
+      }
+
       // Create new item (either no existing item or user chose not to aggregate)
       const newItem: InventoryItem = {
         id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        productId: `product_${Date.now()}`,
+        productId: productData ? productData.id : `product_${Date.now()}`,
         product: {
-          id: `product_${Date.now()}`,
+          id: productData ? productData.id : `product_${Date.now()}`,
           name: product,
-          category: 'Inne',
-          defaultUnit: unit
+          category: productData ? productData.category : 'Inne',
+          defaultUnit: productData ? productData.defaultUnit : unit
         },
         weight: weightValue,
         unit,
@@ -408,7 +427,7 @@ export default function InwenturaApp() {
     inventory.forEach(item => {
       const category = item.product.category.toUpperCase();
       const productName = item.product.name;
-      // Ensure we get a valid ID - use productId if available, otherwise use product.id
+      // Try to get real product ID from database search results, fallback to item.productId
       const productId = item.productId || item.product.id || 'N/A';
 
       if (!productsByCategory.has(category)) {
@@ -431,7 +450,7 @@ export default function InwenturaApp() {
 
     // Generate CSV content
     const csvRows: string[] = [];
-    csvRows.push('L.p.,Nr indeksu,Nazwa towaru,JMZ');
+    csvRows.push('L.p.,Nr indeksu,Nazwa towaru,Ilość,JMZ');
 
     let lineNumber = 1;
 
@@ -439,15 +458,15 @@ export default function InwenturaApp() {
     const sortedCategories = Array.from(productsByCategory.keys()).sort();
 
     sortedCategories.forEach(category => {
-      // Add category header - exactly 3 commas after category name
-      csvRows.push(`${category},,,`);
+      // Add category header - exactly 4 commas after category name for 5 columns
+      csvRows.push(`${category},,,,`);
 
       const products = productsByCategory.get(category)!;
       // Sort products alphabetically within category
       const sortedProducts = Array.from(products.values()).sort((a, b) => a.name.localeCompare(b.name));
 
       sortedProducts.forEach(product => {
-        csvRows.push(`${lineNumber},${product.id},${product.name},${product.unit}`);
+        csvRows.push(`${lineNumber},${product.id},${product.name},${product.totalWeight},${product.unit}`);
         lineNumber++;
       });
     });
@@ -465,30 +484,7 @@ export default function InwenturaApp() {
     document.body.removeChild(link);
   };
 
-  const exportToDetailedCSV = () => {
-    const headers = ['Nazwa', 'Waga', 'Jednostka', 'Data', 'Czas'];
-    const rows = inventory.map(item => [
-      item.product.name,
-      item.weight.toString(),
-      item.unit,
-      new Date(item.timestamp).toLocaleDateString('pl-PL'),
-      new Date(item.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
-    ]);
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `inwentura_szczegoly_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const exportToJSON = () => {
     const exportData = inventory.map(item => ({
@@ -636,11 +632,7 @@ export default function InwenturaApp() {
           </Button>
           <Button onClick={exportToCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            CSV Produkty
-          </Button>
-          <Button onClick={exportToDetailedCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            CSV Szczegóły
+            CSV
           </Button>
           <Button onClick={exportToJSON} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
