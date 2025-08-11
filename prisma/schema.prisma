@@ -30,8 +30,6 @@ model Product {
   category     String
   defaultUnit  String   @map("defaultunit")
   frequency    Int?     @default(0)
-  createdAt    DateTime? @default(now()) @map("createdat")
-  updatedAt    DateTime? @updatedAt @map("updatedat")
 
   // Relations
   inventoryItems InventoryItem[]
