@@ -1,6 +1,6 @@
 // Mock service for testing without database connection
 export interface ProductSuggestion {
-  id: string;
+  id: number;
   name: string;
   category: string;
   defaultUnit: string;
@@ -10,21 +10,21 @@ export interface ProductSuggestion {
 }
 
 const mockProducts: ProductSuggestion[] = [
-  { id: '1', name: 'Jabłko', category: 'Owoce', defaultUnit: 'kg', frequency: 10 },
-  { id: '2', name: 'Mleko', category: 'Nabiał', defaultUnit: 'l', frequency: 15 },
-  { id: '3', name: 'p. BESZAMEL SZPARAGOWY 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 2899 },
-  { id: '4', name: 'p. BOROWIK MARYNOWANY słoik 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 2238 },
-  { id: '5', name: 'p. BRZOSKWINIE W CUKRZE słoik 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 1911 },
-  { id: '6', name: 'p. CZEREŚNIE W WINIE 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 11216 },
-  { id: '7', name: 'p. DEMI GLACE Z KURCZAKA 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 13926 },
-  { id: '8', name: 'p. DEMI RAKI 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 1925 },
-  { id: '9', name: 'p. DEMI RAKI, SKRZYDEŁKA 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 12826 },
-  { id: '10', name: 'p. ESPUMA CZARNY BEZ 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 0 },
-  { id: '11', name: 'Chleb', category: 'Pieczywo', defaultUnit: 'szt', frequency: 25 },
-  { id: '12', name: 'Masło', category: 'Nabiał', defaultUnit: 'kg', frequency: 18 },
-  { id: '13', name: 'Pomidor', category: 'Warzywa', defaultUnit: 'kg', frequency: 22 },
-  { id: '14', name: 'Kurczak', category: 'Mięso', defaultUnit: 'kg', frequency: 30 },
-  { id: '15', name: 'Ryż', category: 'Inne', defaultUnit: 'kg', frequency: 12 },
+  { id: 1, name: 'Jabłko', category: 'Owoce', defaultUnit: 'kg', frequency: 10 },
+  { id: 2, name: 'Mleko', category: 'Nabiał', defaultUnit: 'l', frequency: 15 },
+  { id: 3, name: 'p. BESZAMEL SZPARAGOWY 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 2899 },
+  { id: 4, name: 'p. BOROWIK MARYNOWANY słoik 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 2238 },
+  { id: 5, name: 'p. BRZOSKWINIE W CUKRZE słoik 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 1911 },
+  { id: 6, name: 'p. CZEREŚNIE W WINIE 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 11216 },
+  { id: 7, name: 'p. DEMI GLACE Z KURCZAKA 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 13926 },
+  { id: 8, name: 'p. DEMI RAKI 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 1925 },
+  { id: 9, name: 'p. DEMI RAKI, SKRZYDEŁKA 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 12826 },
+  { id: 10, name: 'p. ESPUMA CZARNY BEZ 1kg', category: 'PÓŁPRODUKTY', defaultUnit: 'kg', frequency: 0 },
+  { id: 11, name: 'Chleb', category: 'Pieczywo', defaultUnit: 'szt', frequency: 25 },
+  { id: 12, name: 'Masło', category: 'Nabiał', defaultUnit: 'kg', frequency: 18 },
+  { id: 13, name: 'Pomidor', category: 'Warzywa', defaultUnit: 'kg', frequency: 22 },
+  { id: 14, name: 'Kurczak', category: 'Mięso', defaultUnit: 'kg', frequency: 30 },
+  { id: 15, name: 'Ryż', category: 'Inne', defaultUnit: 'kg', frequency: 12 },
 ];
 
 export class MockProductService {
@@ -65,7 +65,7 @@ export class MockProductService {
 
   static async addProduct(name: string, category: string, defaultUnit: string = 'szt'): Promise<ProductSuggestion | null> {
     const newProduct: ProductSuggestion = {
-      id: `mock-${Date.now()}`,
+      id: Date.now(),
       name: name.trim(),
       category: category.trim(),
       defaultUnit,

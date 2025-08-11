@@ -25,28 +25,33 @@ model User {
 }
 
 model Product {
-  id           String   @id @default(cuid())
+  id           Int      @id @default(autoincrement())
   name         String   @unique
   category     String
-  defaultUnit  Unit     // kg, g, l, ml, szt
-  frequency    Int?     // Usage frequency counter
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  defaultUnit  String   @map("defaultunit")
+  frequency    Int?     @default(0)
+  createdAt    DateTime? @default(now()) @map("createdat")
+  updatedAt    DateTime? @updatedAt @map("updatedat")
+
   // Relations
   inventoryItems InventoryItem[]
+
+  @@index([name])
+  @@index([category])
+  @@index([frequency])
+  @@map("products")
 }
 
 model InventoryItem {
   id         String   @id @default(cuid())
-  productId  String
+  productId  Int      @map("productid")
   weight     Float
-  unit       Unit     // kg, g, l, ml, szt
+  unit       String
   timestamp  DateTime @default(now())
-  userId     String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  
+  userId     String   @map("userid")
+  createdAt  DateTime @default(now()) @map("createdat")
+  updatedAt  DateTime @updatedAt @map("updatedat")
+
   // Relations
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -69,10 +74,3 @@ model UserConfig {
   updatedAt           DateTime @updatedAt
 }
 
-enum Unit {
-  kg
-  g
-  l
-  ml
-  szt
-}

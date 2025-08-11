@@ -13,7 +13,7 @@ export const db =
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 
 export interface ProductSuggestion {
-  id: string;
+  id: number;
   name: string;
   category: string;
   defaultUnit: string;
@@ -224,7 +224,7 @@ export class ProductService {
   }
 
   // Increment product frequency (when product is used)
-  static async incrementFrequency(productId: string): Promise<void> {
+  static async incrementFrequency(productId: number): Promise<void> {
     try {
       await db.product.update({
         where: { id: productId },
