@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "build:vercel": "prisma generate && prisma migrate deploy && next build",
+    "build:vercel": "prisma generate && next build",
     "start": "next start",
     "start:local": "NODE_ENV=production tsx server.ts 2>&1 | tee server.log",
     "lint": "next lint",
