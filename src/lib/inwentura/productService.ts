@@ -28,7 +28,7 @@ export class ProductService {
   private static categoriesCache: { data: string[]; ts: number } | null = null;
   private static popularCache = new Map<number, { data: ProductSuggestion[]; ts: number }>();
 
-  // Search products with fuzzy matching (with caching)
+  // Advanced search with intelligent matching and scoring
   static async searchProducts(query: string, limit: number = 10): Promise<ProductSuggestion[]> {
     if (!query.trim()) return [];
 
@@ -42,77 +42,72 @@ export class ProductService {
     try {
       console.log('Searching for products with query:', query);
 
-      // First try exact/contains match (case-insensitive)
-      const exactMatches = await db.product.findMany({
-        where: {
-          name: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-        orderBy: [
-          { frequency: 'desc' },
-          { name: 'asc' },
-        ],
-        take: limit,
-      });
-
-      console.log('Exact matches found:', exactMatches.length);
-
-      // If we have exact matches, return them
-      if (exactMatches.length > 0) {
-        const result = exactMatches.map((product) => ({
-          id: product.id,
-          name: product.name,
-          category: product.category,
-          defaultUnit: product.defaultUnit,
-          frequency: product.frequency || 0,
-          score: 100, // Exact/contains match gets high score
-        }));
-        this.searchCache.set(key, { data: result, ts: now });
-        return result;
-      }
-
-      // If no exact matches, try partial match across name and category (case-insensitive)
-      const partialMatches = await db.product.findMany({
+      // Get broader set of potential matches for intelligent scoring
+      const allMatches = await db.product.findMany({
         where: {
           OR: [
+            // Exact name match (highest priority)
+            {
+              name: {
+                equals: query,
+                mode: 'insensitive',
+              },
+            },
+            // Name starts with query
+            {
+              name: {
+                startsWith: query,
+                mode: 'insensitive',
+              },
+            },
+            // Name contains query
             {
               name: {
                 contains: query,
                 mode: 'insensitive',
               },
             },
+            // Category matches
             {
               category: {
                 contains: query,
                 mode: 'insensitive',
               },
             },
+            // Fuzzy matching for typos (split words)
+            ...this.generateFuzzyQueries(query),
           ],
         },
-        orderBy: [
-          { frequency: 'desc' },
-          { name: 'asc' },
-        ],
-        take: limit,
+        take: limit * 3, // Get more results for better scoring
       });
 
-      console.log('Partial matches found:', partialMatches.length);
+      console.log('Total matches found:', allMatches.length);
 
-      const result = partialMatches.map((product) => ({
-        id: product.id,
-        name: product.name,
-        category: product.category,
-        defaultUnit: product.defaultUnit,
-        frequency: product.frequency || 0,
-        score: this.calculateScore(query, product.name),
-      }));
-      this.searchCache.set(key, { data: result, ts: now });
-      return result;
+      // Score and sort results intelligently
+      const scoredResults = allMatches
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          defaultUnit: product.defaultUnit,
+          frequency: product.frequency || 0,
+          score: this.calculateAdvancedScore(query, product),
+          matchType: this.getMatchType(query, product),
+        }))
+        .filter((result) => result.score > 0) // Remove irrelevant results
+        .sort((a, b) => {
+          // Sort by score first, then frequency, then alphabetically
+          if (b.score !== a.score) return b.score - a.score;
+          if (b.frequency !== a.frequency) return b.frequency - a.frequency;
+          return a.name.localeCompare(b.name);
+        })
+        .slice(0, limit);
+
+      this.searchCache.set(key, { data: scoredResults, ts: now });
+      return scoredResults;
     } catch (error) {
       console.error('Error searching products:', error);
-      return [];
+      throw error; // Re-throw for fallback handling
     }
   }
 
@@ -139,11 +134,11 @@ export class ProductService {
         };
       }
 
-      // Create new product (store normalized to lowercase for consistency)
+      // Create new product (preserve original case)
       const newProduct = await db.product.create({
         data: {
-          name: name.toLowerCase(),
-          category: category.toLowerCase(),
+          name: name.trim(),
+          category: category.trim(),
           defaultUnit,
         },
       });
@@ -189,7 +184,7 @@ export class ProductService {
       return data;
     } catch (error) {
       console.error('Error getting categories:', error);
-      return [];
+      throw error; // Re-throw for fallback handling
     }
   }
 
@@ -198,6 +193,7 @@ export class ProductService {
     const now = Date.now();
     const cached = this.popularCache.get(limit);
     if (cached && now - cached.ts < this.CACHE_TTL_MS) {
+      console.log('Returning cached popular products:', cached.data.length);
       return cached.data;
     }
 
@@ -223,7 +219,7 @@ export class ProductService {
       return data;
     } catch (error) {
       console.error('Error getting popular products:', error);
-      return [];
+      throw error; // Re-throw for fallback handling
     }
   }
 
@@ -245,32 +241,89 @@ export class ProductService {
     }
   }
 
-  // Simple scoring algorithm for fuzzy matching
-  private static calculateScore(query: string, productName: string): number {
-    const queryLower = query.toLowerCase();
-    const nameLower = productName.toLowerCase();
+  // Generate fuzzy search queries for typos and partial matches
+  private static generateFuzzyQueries(query: string): any[] {
+    const queries = [];
+    const words = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
 
-    // Exact match
-    if (nameLower === queryLower) return 100;
+    // Search for individual words
+    for (const word of words) {
+      queries.push({
+        name: {
+          contains: word,
+          mode: 'insensitive',
+        },
+      });
+    }
 
-    // Starts with
-    if (nameLower.startsWith(queryLower)) return 90;
+    return queries;
+  }
 
-    // Contains
-    if (nameLower.includes(queryLower)) return 70;
+  // Advanced scoring algorithm with multiple factors
+  private static calculateAdvancedScore(query: string, product: any): number {
+    const queryLower = query.toLowerCase().trim();
+    const nameLower = product.name.toLowerCase();
+    const categoryLower = product.category.toLowerCase();
 
-    // Partial match (character by character)
     let score = 0;
-    let queryIndex = 0;
 
-    for (let i = 0; i < nameLower.length && queryIndex < queryLower.length; i++) {
-      if (nameLower[i] === queryLower[queryIndex]) {
-        score += 10;
-        queryIndex++;
+    // Exact name match (highest score)
+    if (nameLower === queryLower) {
+      score += 1000;
+    }
+    // Name starts with query (very high score)
+    else if (nameLower.startsWith(queryLower)) {
+      score += 800;
+    }
+    // Name contains query (high score)
+    else if (nameLower.includes(queryLower)) {
+      score += 600;
+      // Bonus for position (earlier = better)
+      const position = nameLower.indexOf(queryLower);
+      score += Math.max(0, 100 - position * 2);
+    }
+
+    // Category matches (medium score)
+    if (categoryLower.includes(queryLower)) {
+      score += 300;
+    }
+
+    // Word-based matching for multi-word queries
+    const queryWords = queryLower.split(/\s+/).filter(w => w.length > 1);
+    const nameWords = nameLower.split(/\s+/);
+
+    for (const queryWord of queryWords) {
+      for (const nameWord of nameWords) {
+        if (nameWord.startsWith(queryWord)) {
+          score += 200;
+        } else if (nameWord.includes(queryWord)) {
+          score += 100;
+        }
       }
     }
 
-    return Math.min(score, 60);
+    // Frequency bonus (popular products get slight boost)
+    const frequency = product.frequency || 0;
+    score += Math.min(frequency * 2, 100);
+
+    // Length penalty (shorter names are often more relevant)
+    const lengthPenalty = Math.max(0, nameLower.length - queryLower.length) * 2;
+    score -= lengthPenalty;
+
+    return Math.max(0, score);
+  }
+
+  // Determine match type for UI highlighting
+  private static getMatchType(query: string, product: any): string {
+    const queryLower = query.toLowerCase().trim();
+    const nameLower = product.name.toLowerCase();
+    const categoryLower = product.category.toLowerCase();
+
+    if (nameLower === queryLower) return 'exact';
+    if (nameLower.startsWith(queryLower)) return 'prefix';
+    if (nameLower.includes(queryLower)) return 'contains';
+    if (categoryLower.includes(queryLower)) return 'category';
+    return 'fuzzy';
   }
 
   // Initialize with sample products
@@ -303,7 +356,8 @@ export class ProductService {
         const existing = await db.product.findFirst({
           where: {
             name: {
-              equals: product.name.toLowerCase(),
+              equals: product.name,
+              mode: 'insensitive',
             },
           },
         });
@@ -311,8 +365,8 @@ export class ProductService {
         if (!existing) {
           await db.product.create({
             data: {
-              name: product.name.toLowerCase(),
-              category: product.category.toLowerCase(),
+              name: product.name,
+              category: product.category,
               defaultUnit: product.defaultUnit,
             },
           });

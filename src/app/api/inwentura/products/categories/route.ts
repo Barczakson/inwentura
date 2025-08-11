@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { ProductService } from '@/lib/inwentura/productService';
+import { MockProductService } from '@/lib/inwentura/mockProductService';
 
 export async function GET() {
   try {
-    const categories = await ProductService.getCategories();
+    let categories;
+    try {
+      categories = await ProductService.getCategories();
+    } catch (dbError) {
+      console.warn('Database unavailable, using mock data:', dbError);
+      categories = await MockProductService.getCategories();
+    }
+
     return new NextResponse(JSON.stringify(categories), {
       headers: {
         'Content-Type': 'application/json',

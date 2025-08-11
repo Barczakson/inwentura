@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ProductService } from '@/lib/inwentura/productService';
+import { MockProductService } from '@/lib/inwentura/mockProductService';
 
 export async function GET(request: Request) {
   try {
@@ -17,7 +18,19 @@ export async function GET(request: Request) {
       });
     }
 
-    const results = await ProductService.searchProducts(query, 10);
+    let results;
+    try {
+      // Try real database first
+      console.log('Trying to search products in database...');
+      results = await ProductService.searchProducts(query, 10);
+      console.log('Got search results from database:', results.length);
+    } catch (dbError) {
+      console.warn('Database unavailable, using mock data:', (dbError as Error)?.message);
+      // Fallback to mock service
+      results = await MockProductService.searchProducts(query, 10);
+      console.log('Got search results from mock service:', results.length);
+    }
+
     return new NextResponse(JSON.stringify(results), {
       headers: {
         'Content-Type': 'application/json',

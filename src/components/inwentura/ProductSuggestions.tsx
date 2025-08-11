@@ -16,6 +16,7 @@ interface ProductSuggestion {
   defaultUnit: string;
   frequency?: number;
   score?: number;
+  matchType?: string;
 }
 
 interface ProductSuggestionsProps {
@@ -47,7 +48,7 @@ export default function ProductSuggestions({
   const queryClient = useQueryClient();
 
   // Query: Categories (cache 10 min, background revalidate)
-  useQuery({
+  const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await fetch('/api/inwentura/products/categories');
@@ -57,11 +58,10 @@ export default function ProductSuggestions({
     staleTime: 10 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnMount: false,
-    onSuccess: (data) => setCategories(data),
   });
 
   // Query: Popular products (cache 5 min)
-  useQuery({
+  const { data: popularProductsData } = useQuery({
     queryKey: ['popular-products', 10],
     queryFn: async () => {
       const res = await fetch('/api/inwentura/products/popular?limit=10');
@@ -71,8 +71,16 @@ export default function ProductSuggestions({
     staleTime: 5 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
     refetchOnMount: false,
-    onSuccess: (data) => setPopularProducts(data),
   });
+
+  // Update local state when data changes
+  useEffect(() => {
+    if (categoriesData) setCategories(categoriesData);
+  }, [categoriesData]);
+
+  useEffect(() => {
+    if (popularProductsData) setPopularProducts(popularProductsData);
+  }, [popularProductsData]);
 
   const handleRefreshProducts = async () => {
     await queryClient.invalidateQueries({ queryKey: ['popular-products', 10] });
@@ -122,7 +130,7 @@ export default function ProductSuggestions({
       } finally {
         setIsLoading(false);
       }
-    }, 300),
+    }, 200), // Faster response for better UX
     [queryClient]
   );
 
@@ -238,9 +246,42 @@ export default function ProductSuggestions({
 
 
 
-  const canAddNew = value.trim() && !suggestions.some(p => 
+  const canAddNew = value.trim() && !suggestions.some(p =>
     p.name.toLowerCase() === value.toLowerCase()
   );
+
+  // Highlight matching text in product names
+  const highlightMatch = (text: string, query: string): React.ReactElement => {
+    if (!query.trim()) return <span>{text}</span>;
+
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+
+    return (
+      <span>
+        {parts.map((part, index) =>
+          regex.test(part) ? (
+            <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">
+              {part}
+            </mark>
+          ) : (
+            <span key={index}>{part}</span>
+          )
+        )}
+      </span>
+    );
+  };
+
+  // Get match type badge color
+  const getMatchTypeBadge = (matchType?: string) => {
+    switch (matchType) {
+      case 'exact': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'prefix': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'contains': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      case 'category': return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+    }
+  };
 
   return (
     <div ref={containerRef} className="relative">
@@ -305,17 +346,36 @@ export default function ProductSuggestions({
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {product.category} • domyślnie: {product.defaultUnit}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">
+                            {highlightMatch(product.name, value)}
+                          </div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-2">
+                            <span className="truncate">
+                              {highlightMatch(product.category, value)} • {product.defaultUnit}
+                            </span>
+                            {product.frequency && product.frequency > 0 && (
+                              <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                                {product.frequency}x
+                              </span>
+                            )}
                           </div>
                         </div>
-                        {product.score && (
-                          <Badge variant="secondary" className="text-xs">
-                            {Math.round(product.score)}%
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1 ml-2">
+                          {product.matchType && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${getMatchTypeBadge(product.matchType)}`}>
+                              {product.matchType === 'exact' ? 'dokładne' :
+                               product.matchType === 'prefix' ? 'początek' :
+                               product.matchType === 'contains' ? 'zawiera' :
+                               product.matchType === 'category' ? 'kategoria' : 'podobne'}
+                            </span>
+                          )}
+                          {product.score && product.score > 0 && (
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round(product.score / 10)}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </button>
                   );
@@ -324,8 +384,11 @@ export default function ProductSuggestions({
             ) : value.trim() ? (
               <div className="p-4 text-center">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-sm text-muted-foreground mb-2">
                   Nie znaleziono produktu "{value}"
+                </p>
+                <p className="text-xs text-muted-foreground mb-3 opacity-75">
+                  Sprawdź pisownię lub spróbuj wyszukać po kategorii
                 </p>
                 {canAddNew && onAddNew && (
                   <Button
@@ -334,7 +397,7 @@ export default function ProductSuggestions({
                     className="w-full"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Dodaj nowy produkt
+                    Dodaj "{value}" jako nowy produkt
                   </Button>
                 )}
               </div>
@@ -359,8 +422,11 @@ export default function ProductSuggestions({
                     ))}
                   </div>
                 </div>
-                <div className="text-center text-muted-foreground text-xs">
-                  Wpisz nazwę produktu, aby zobaczyć sugestie
+                <div className="text-center text-muted-foreground text-xs space-y-1">
+                  <p>Wpisz nazwę produktu, aby zobaczyć sugestie</p>
+                  <p className="text-xs opacity-75">
+                    💡 Możesz szukać po nazwie lub kategorii
+                  </p>
                 </div>
               </div>
             )}
@@ -376,6 +442,6 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
   let timeout: NodeJS.Timeout;
   return ((...args: any[]) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => func.apply(this, args), wait);
+    timeout = setTimeout(() => func(...args), wait);
   }) as T;
 }
