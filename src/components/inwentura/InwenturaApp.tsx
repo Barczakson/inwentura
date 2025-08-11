@@ -13,6 +13,11 @@ import { Mic, MicOff, Plus, Trash2, Download, RefreshCw, Shield, LogOut } from '
 import { parseVoiceInput, startVoiceRecognition, testVoiceParser, Unit, VoiceInput } from '@/lib/inwentura/voice';
 import { Product } from '@/types/inwentura';
 import ProductSuggestions from './ProductSuggestions';
+// import SyncStatusDialog from './SyncStatusDialog';
+// Temporarily disable advanced offline features to fix SSR issues
+// import { SyncStatus } from '@/lib/inwentura/syncService';
+// import { offlineStorage } from '@/lib/inwentura/offlineStorage';
+// import { useSyncService } from '@/hooks/useSyncService';
 
 const UNITS: { value: Unit; label: string }[] = [
   { value: 'kg', label: 'kg (kilogramy)' },
@@ -46,17 +51,54 @@ export default function InwenturaApp() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
-  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Temporary simple sync status for basic functionality
+  const [syncStatus, setSyncStatus] = useState({
+    isOnline: typeof window !== 'undefined' ? navigator.onLine : false,
+    isSyncing: false,
+    lastSync: null as Date | null,
+    pendingItems: 0,
+    errors: [] as string[]
+  });
+
   const recognitionRef = useRef<(() => void) | null>(null);
 
   // Check authentication and load data on mount
   useEffect(() => {
-    const savedAuth = localStorage.getItem('inwentura_auth');
-    if (savedAuth === 'authenticated') {
-      setIsAuthenticated(true);
-      loadInventory();
-      loadCategories();
-      initializeProductsIfNeeded();
+    const initializeApp = async () => {
+      setIsLoading(true);
+
+      const savedAuth = localStorage.getItem('inwentura_auth');
+      if (savedAuth === 'authenticated') {
+        setIsAuthenticated(true);
+
+        // Load data from localStorage for now
+        loadInventory();
+
+        await loadCategories();
+        await initializeProductsIfNeeded();
+      }
+
+      setIsLoading(false);
+    };
+
+    initializeApp();
+
+    // Set up online/offline listeners
+    if (typeof window !== 'undefined') {
+      const handleOnline = () => setSyncStatus(prev => ({ ...prev, isOnline: true }));
+      const handleOffline = () => setSyncStatus(prev => ({ ...prev, isOnline: false }));
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
     }
   }, []);
 
@@ -144,6 +186,8 @@ export default function InwenturaApp() {
     saveInventory(inventory);
   };
 
+
+
   const handleLogin = async () => {
     setIsProcessing(true);
     setError('');
@@ -216,7 +260,7 @@ export default function InwenturaApp() {
     setIsListening(false);
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (!product.trim()) {
       setError('Wprowadź nazwę produktu');
       return;
@@ -233,7 +277,8 @@ export default function InwenturaApp() {
 
     try {
       const newItem: InventoryItem = {
-        id: `item_${Date.now()}`,
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        productId: `product_${Date.now()}`,
         product: {
           id: `product_${Date.now()}`,
           name: product,
@@ -242,20 +287,23 @@ export default function InwenturaApp() {
         },
         weight: weightValue,
         unit,
-        timestamp: new Date().toISOString()
+        timestamp: new Date(),
+        userId: 'demo-user' // In real app, get from auth context
       };
 
+      // Update local state and save
       const updatedInventory = [newItem, ...inventory];
       setInventory(updatedInventory);
       saveInventory(updatedInventory);
-      
+
       // Reset form
       setProduct('');
       setWeight('1');
       setUnit('szt');
       setVoiceResult(null);
-      
+
     } catch (err) {
+      console.error('Error adding item:', err);
       setError('Wystąpił błąd podczas dodawania produktu');
     } finally {
       setIsProcessing(false);
@@ -430,6 +478,19 @@ export default function InwenturaApp() {
     );
   }
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 max-w-4xl">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Ładowanie inwentarza...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       {/* Header */}
@@ -444,8 +505,38 @@ export default function InwenturaApp() {
               Auto-zapis: {lastAutoSave.toLocaleTimeString('pl-PL')}
             </p>
           )}
+
+          {/* Sync Status */}
+          <div className="flex items-center gap-2 mt-2">
+            <div className={`w-2 h-2 rounded-full ${syncStatus.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-xs text-muted-foreground">
+              {syncStatus.isOnline ? 'Online' : 'Offline'}
+              {syncStatus.isSyncing && ' - Synchronizacja...'}
+              {syncStatus.pendingItems > 0 && ` (${syncStatus.pendingItems} oczekujących)`}
+            </span>
+            {syncStatus.lastSync && (
+              <span className="text-xs text-muted-foreground">
+                | Ostatnia sync: {syncStatus.lastSync.toLocaleTimeString('pl-PL')}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={() => {
+              setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+              // Simulate sync
+              setTimeout(() => {
+                setSyncStatus(prev => ({ ...prev, isSyncing: false, lastSync: new Date() }));
+              }, 1000);
+            }}
+            variant="outline"
+            size="sm"
+            disabled={syncStatus.isSyncing || !syncStatus.isOnline}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${syncStatus.isSyncing ? 'animate-spin' : ''}`} />
+            Sync
+          </Button>
           <Button onClick={exportToCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             CSV

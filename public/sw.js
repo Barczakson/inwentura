@@ -1,5 +1,5 @@
-const CACHE_NAME = 'inwentura-v1';
-const API_CACHE_NAME = 'inwentura-api-v1';
+const CACHE_NAME = 'inwentura-v2';
+const API_CACHE_NAME = 'inwentura-api-v2';
 
 // URLs to cache on install
 const STATIC_CACHE_URLS = [
@@ -13,6 +13,7 @@ const STATIC_CACHE_URLS = [
 const API_CACHE_URLS = [
   '/api/inwentura/products/categories',
   '/api/inwentura/products/popular',
+  '/api/inwentura/products/search',
   '/api/test-voice'
 ];
 
@@ -107,7 +108,20 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .catch(() => {
           // Queue the request for when online
-          return queueRequest(event.request);
+          return queueRequest(event.request).then(() => {
+            // Return a success response to prevent errors in the UI
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: 'Request queued for sync when online',
+                offline: true
+              }),
+              {
+                headers: { 'Content-Type': 'application/json' },
+                status: 200
+              }
+            );
+          });
         })
     );
     return;
