@@ -71,9 +71,21 @@ export class MockProductService {
       defaultUnit,
       frequency: 0,
     };
-    
+
     mockProducts.push(newProduct);
     return newProduct;
+  }
+
+  static async getAllProducts(): Promise<ProductSuggestion[]> {
+    return mockProducts
+      .sort((a, b) => {
+        // Sort by category first, then by name
+        if (a.category !== b.category) {
+          return a.category.localeCompare(b.category);
+        }
+        return a.name.localeCompare(b.name);
+      })
+      .map(p => ({ ...p }));
   }
 
   private static calculateAdvancedScore(query: string, product: ProductSuggestion): number {

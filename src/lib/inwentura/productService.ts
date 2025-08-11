@@ -326,6 +326,29 @@ export class ProductService {
     return 'fuzzy';
   }
 
+  // Get all products (sorted by category and name)
+  static async getAllProducts(): Promise<ProductSuggestion[]> {
+    try {
+      const products = await db.product.findMany({
+        orderBy: [
+          { category: 'asc' },
+          { name: 'asc' },
+        ],
+      });
+
+      return products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        defaultUnit: product.defaultUnit,
+        frequency: product.frequency || 0,
+      }));
+    } catch (error) {
+      console.error('Error getting all products:', error);
+      throw error;
+    }
+  }
+
   // Initialize with sample products
   static async initializeSampleProducts(): Promise<void> {
     try {

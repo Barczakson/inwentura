@@ -276,6 +276,39 @@ export default function InwenturaApp() {
     setError('');
 
     try {
+      // Check if product already exists in inventory
+      const existingItem = inventory.find(item =>
+        item.product.name.toLowerCase() === product.toLowerCase() &&
+        item.unit === unit
+      );
+
+      if (existingItem) {
+        // Ask user if they want to add to existing item
+        const shouldAggregate = window.confirm(
+          `Produkt "${product}" już istnieje w inwentarzu (${existingItem.weight} ${existingItem.unit}).\n\nCzy dodać ${weightValue} ${unit} do istniejącej pozycji?\n\nTAK - suma będzie: ${existingItem.weight + weightValue} ${unit}\nNIE - utworzy nową pozycję`
+        );
+
+        if (shouldAggregate) {
+          // Update existing item
+          const updatedInventory = inventory.map(item =>
+            item.id === existingItem.id
+              ? { ...item, weight: item.weight + weightValue, timestamp: new Date() }
+              : item
+          );
+          setInventory(updatedInventory);
+          saveInventory(updatedInventory);
+
+          // Reset form
+          setProduct('');
+          setWeight('1');
+          setUnit('szt');
+          setVoiceResult(null);
+          setIsProcessing(false);
+          return;
+        }
+      }
+
+      // Create new item (either no existing item or user chose not to aggregate)
       const newItem: InventoryItem = {
         id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         productId: `product_${Date.now()}`,
@@ -369,6 +402,70 @@ export default function InwenturaApp() {
   };
 
   const exportToCSV = () => {
+    // Group products by category and aggregate quantities
+    const productsByCategory = new Map<string, Map<string, { name: string, id: string | number, unit: string, totalWeight: number }>>();
+
+    inventory.forEach(item => {
+      const category = item.product.category.toUpperCase();
+      const productName = item.product.name;
+      // Ensure we get a valid ID - use productId if available, otherwise use product.id
+      const productId = item.productId || item.product.id || 'N/A';
+
+      if (!productsByCategory.has(category)) {
+        productsByCategory.set(category, new Map());
+      }
+
+      const categoryProducts = productsByCategory.get(category)!;
+      if (!categoryProducts.has(productName)) {
+        categoryProducts.set(productName, {
+          name: productName,
+          id: productId,
+          unit: item.unit,
+          totalWeight: 0
+        });
+      }
+
+      const product = categoryProducts.get(productName)!;
+      product.totalWeight += item.weight;
+    });
+
+    // Generate CSV content
+    const csvRows: string[] = [];
+    csvRows.push('L.p.,Nr indeksu,Nazwa towaru,JMZ');
+
+    let lineNumber = 1;
+
+    // Sort categories alphabetically
+    const sortedCategories = Array.from(productsByCategory.keys()).sort();
+
+    sortedCategories.forEach(category => {
+      // Add category header - exactly 3 commas after category name
+      csvRows.push(`${category},,,`);
+
+      const products = productsByCategory.get(category)!;
+      // Sort products alphabetically within category
+      const sortedProducts = Array.from(products.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedProducts.forEach(product => {
+        csvRows.push(`${lineNumber},${product.id},${product.name},${product.unit}`);
+        lineNumber++;
+      });
+    });
+
+    const csvContent = csvRows.join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `inwentura_produkty_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToDetailedCSV = () => {
     const headers = ['Nazwa', 'Waga', 'Jednostka', 'Data', 'Czas'];
     const rows = inventory.map(item => [
       item.product.name,
@@ -377,16 +474,16 @@ export default function InwenturaApp() {
       new Date(item.timestamp).toLocaleDateString('pl-PL'),
       new Date(item.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
     ]);
-    
+
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(','))
       .join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `inwentura_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `inwentura_szczegoly_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -402,7 +499,7 @@ export default function InwenturaApp() {
       czas: new Date(item.timestamp).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
       timestamp: item.timestamp
     }));
-    
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -539,7 +636,11 @@ export default function InwenturaApp() {
           </Button>
           <Button onClick={exportToCSV} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
-            CSV
+            CSV Produkty
+          </Button>
+          <Button onClick={exportToDetailedCSV} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            CSV Szczegóły
           </Button>
           <Button onClick={exportToJSON} variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
