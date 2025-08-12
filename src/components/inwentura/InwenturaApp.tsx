@@ -9,10 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Mic, MicOff, Plus, Trash2, Download, RefreshCw, Shield, LogOut } from 'lucide-react';
+import { Mic, MicOff, Plus, Trash2, Download, RefreshCw, Shield, LogOut, FileSpreadsheet } from 'lucide-react';
 import { parseVoiceInput, startVoiceRecognition, testVoiceParser, Unit, VoiceInput } from '@/lib/inwentura/voice';
 import { Product } from '@/types/inwentura';
 import ProductSuggestions from './ProductSuggestions';
+import * as XLSX from 'xlsx';
 // import SyncStatusDialog from './SyncStatusDialog';
 // Temporarily disable advanced offline features to fix SSR issues
 // import { SyncStatus } from '@/lib/inwentura/syncService';
@@ -437,10 +438,10 @@ export default function InwenturaApp() {
     saveInventory(updatedInventory);
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     // Ask user for filename
     const defaultFileName = `inwentura_${new Date().toISOString().split('T')[0]}`;
-    const fileName = window.prompt('Podaj nazwę pliku (bez rozszerzenia .csv):', defaultFileName);
+    const fileName = window.prompt('Podaj nazwę pliku (bez rozszerzenia .xlsx):', defaultFileName);
 
     if (!fileName) {
       return; // User cancelled
@@ -473,9 +474,11 @@ export default function InwenturaApp() {
       product.totalWeight += item.weight;
     });
 
-    // Generate CSV content
-    const csvRows: string[] = [];
-    csvRows.push('L.p.,Nr indeksu,Nazwa towaru,Ilość,JMZ');
+    // Prepare data for Excel
+    const excelData: any[][] = [];
+
+    // Add header row
+    excelData.push(['L.p.', 'Nr indeksu', 'Nazwa towaru', 'Ilość', 'JMZ']);
 
     let lineNumber = 1;
 
@@ -483,30 +486,49 @@ export default function InwenturaApp() {
     const sortedCategories = Array.from(productsByCategory.keys()).sort();
 
     sortedCategories.forEach(category => {
-      // Add category header - exactly 4 commas after category name for 5 columns
-      csvRows.push(`${category},,,,`);
+      // Add category header row
+      excelData.push([category, '', '', '', '']);
 
       const products = productsByCategory.get(category)!;
       // Sort products alphabetically within category
       const sortedProducts = Array.from(products.values()).sort((a, b) => a.name.localeCompare(b.name));
 
       sortedProducts.forEach(product => {
-        csvRows.push(`${lineNumber},${product.id},${product.name},${product.totalWeight},${product.unit}`);
+        excelData.push([lineNumber, product.id, product.name, product.totalWeight, product.unit]);
         lineNumber++;
       });
     });
 
-    const csvContent = csvRows.join('\n');
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${fileName}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 6 },   // L.p.
+      { wch: 12 },  // Nr indeksu
+      { wch: 30 },  // Nazwa towaru
+      { wch: 8 },   // Ilość
+      { wch: 8 }    // JMZ
+    ];
+
+    // Style category headers (bold)
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    for (let row = range.s.r; row <= range.e.r; row++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const cell = worksheet[cellAddress];
+      if (cell && typeof cell.v === 'string' && cell.v.match(/^[A-ZĄĆĘŁŃÓŚŹŻ\s]+$/)) {
+        // This is a category header
+        if (!cell.s) cell.s = {};
+        cell.s.font = { bold: true };
+      }
+    }
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Inwentura');
+
+    // Generate Excel file and download
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
   };
 
 
@@ -667,10 +689,11 @@ export default function InwenturaApp() {
               <span className="hidden sm:inline">Sync</span>
               <span className="sm:hidden">Synchronizuj</span>
             </Button>
-            <Button onClick={exportToCSV} variant="outline" size="sm" className="w-full sm:w-auto">
-              <Download className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">CSV</span>
-              <span className="sm:hidden">Eksport CSV</span>
+            {/* Excel Export Button */}
+            <Button onClick={exportToExcel} variant="outline" size="sm" className="w-full sm:w-auto">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Excel</span>
+              <span className="sm:hidden">Eksport Excel</span>
             </Button>
             <Button onClick={exportToJSON} variant="outline" size="sm" className="w-full sm:w-auto">
               <Download className="h-4 w-4 mr-2" />
