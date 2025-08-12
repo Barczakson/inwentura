@@ -438,6 +438,14 @@ export default function InwenturaApp() {
   };
 
   const exportToCSV = () => {
+    // Ask user for filename
+    const defaultFileName = `inwentura_${new Date().toISOString().split('T')[0]}`;
+    const fileName = window.prompt('Podaj nazwę pliku (bez rozszerzenia .csv):', defaultFileName);
+
+    if (!fileName) {
+      return; // User cancelled
+    }
+
     // Group products by category and aggregate quantities
     const productsByCategory = new Map<string, Map<string, { name: string, id: string | number, unit: string, totalWeight: number }>>();
 
@@ -494,7 +502,7 @@ export default function InwenturaApp() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `inwentura_produkty_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `${fileName}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -504,6 +512,14 @@ export default function InwenturaApp() {
 
 
   const exportToJSON = () => {
+    // Ask user for filename
+    const defaultFileName = `inwentura_szczegoly_${new Date().toISOString().split('T')[0]}`;
+    const fileName = window.prompt('Podaj nazwę pliku (bez rozszerzenia .json):', defaultFileName);
+
+    if (!fileName) {
+      return; // User cancelled
+    }
+
     const exportData = inventory.map(item => ({
       nazwa: item.product.name,
       waga: item.weight,
@@ -517,7 +533,7 @@ export default function InwenturaApp() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `inwentura_${new Date().toISOString().split('T')[0]}.json`);
+    link.setAttribute('download', `${fileName}.json`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -602,96 +618,95 @@ export default function InwenturaApp() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
+    <div className="container mx-auto px-4 py-6 max-w-6xl">
       {/* Header */}
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Inwentura</h1>
-          <p className="text-muted-foreground">
-            Zarządzaj swoim inwentarzem za pomocą komend głosowych
-          </p>
-          {lastAutoSave && (
-            <p className="text-xs text-muted-foreground">
-              Auto-zapis: {lastAutoSave.toLocaleTimeString('pl-PL')}
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Inwentura</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Zarządzaj swoim inwentarzem za pomocą komend głosowych
             </p>
-          )}
-
-          {/* Sync Status */}
-          <div className="flex items-center gap-2 mt-2">
-            <div className={`w-2 h-2 rounded-full ${syncStatus.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-xs text-muted-foreground">
-              {syncStatus.isOnline ? 'Online' : 'Offline'}
-              {syncStatus.isSyncing && ' - Synchronizacja...'}
-              {syncStatus.pendingItems > 0 && ` (${syncStatus.pendingItems} oczekujących)`}
-            </span>
-            {syncStatus.lastSync && (
-              <span className="text-xs text-muted-foreground">
-                | Ostatnia sync: {syncStatus.lastSync.toLocaleTimeString('pl-PL')}
-              </span>
+            {lastAutoSave && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Auto-zapis: {lastAutoSave.toLocaleTimeString('pl-PL')}
+              </p>
             )}
+
+            {/* Sync Status */}
+            <div className="flex items-center gap-2 mt-2">
+              <div className={`w-2 h-2 rounded-full ${syncStatus.isOnline ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-xs text-muted-foreground">
+                {syncStatus.isOnline ? 'Online' : 'Offline'}
+                {syncStatus.isSyncing && ' - Synchronizacja...'}
+                {syncStatus.pendingItems > 0 && ` (${syncStatus.pendingItems} oczekujących)`}
+              </span>
+              {syncStatus.lastSync && (
+                <span className="text-xs text-muted-foreground">
+                  | Ostatnia sync: {syncStatus.lastSync.toLocaleTimeString('pl-PL')}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => {
-              setSyncStatus(prev => ({ ...prev, isSyncing: true }));
-              // Simulate sync
-              setTimeout(() => {
-                setSyncStatus(prev => ({ ...prev, isSyncing: false, lastSync: new Date() }));
-              }, 1000);
-            }}
-            variant="outline"
-            size="sm"
-            disabled={syncStatus.isSyncing || !syncStatus.isOnline}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${syncStatus.isSyncing ? 'animate-spin' : ''}`} />
-            Sync
-          </Button>
-          <Button onClick={exportToCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            CSV
-          </Button>
-          <Button onClick={exportToJSON} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            JSON
-          </Button>
-          <Button onClick={clearAllData} variant="outline" size="sm">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Wyczyść
-          </Button>
-          <Button onClick={handleLogout} variant="outline" size="sm">
-            <LogOut className="h-4 w-4 mr-2" />
-            Wyloguj
-          </Button>
+
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                setSyncStatus(prev => ({ ...prev, isSyncing: true }));
+                // Simulate sync
+                setTimeout(() => {
+                  setSyncStatus(prev => ({ ...prev, isSyncing: false, lastSync: new Date() }));
+                }, 1000);
+              }}
+              variant="outline"
+              size="sm"
+              disabled={syncStatus.isSyncing || !syncStatus.isOnline}
+              className="w-full sm:w-auto"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${syncStatus.isSyncing ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync</span>
+              <span className="sm:hidden">Synchronizuj</span>
+            </Button>
+            <Button onClick={exportToCSV} variant="outline" size="sm" className="w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">CSV</span>
+              <span className="sm:hidden">Eksport CSV</span>
+            </Button>
+            <Button onClick={exportToJSON} variant="outline" size="sm" className="w-full sm:w-auto">
+              <Download className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">JSON</span>
+              <span className="sm:hidden">Eksport JSON</span>
+            </Button>
+            <Button onClick={clearAllData} variant="outline" size="sm" className="w-full sm:w-auto">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Wyczyść
+            </Button>
+            <Button onClick={handleLogout} variant="outline" size="sm" className="w-full sm:w-auto">
+              <LogOut className="h-4 w-4 mr-2" />
+              Wyloguj
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Voice Recognition Section */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Mic className="h-5 w-5" />
             Rozpoznawanie mowy
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex justify-center">
             <Button
               onClick={isListening ? stopListening : startListening}
               disabled={isProcessing}
               variant={isListening ? "destructive" : "default"}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 w-full sm:w-auto"
             >
               {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              {isListening ? 'Zatrzymaj' : 'Nagraj komendę'}
-            </Button>
-            
-            <Button
-              onClick={handleTestParser}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              Testuj parser
+              {isListening ? 'Zatrzymaj nagrywanie' : 'Nagraj komendę głosową'}
             </Button>
           </div>
 
@@ -722,27 +737,25 @@ export default function InwenturaApp() {
       {/* Manual Input Section */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Dodaj produkt ręcznie</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Dodaj produkt ręcznie</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium">Produkt</label>
-              <ProductSuggestions
-                value={product}
-                onChange={setProduct}
-                onSelect={handleProductSelect}
-                onAddNew={(name) => {
-                  setNewProduct({ ...newProduct, name });
-                  setShowAddProduct(true);
-                }}
-                placeholder="np. jabłko"
-                disabled={isProcessing}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Waga</label>
+        <CardContent className="space-y-6">
+          {/* Przycisk dodawania - na górze */}
+          <div>
+            <Button
+              onClick={handleAddItem}
+              disabled={isProcessing}
+              className="w-full flex items-center justify-center gap-2 h-12 text-base font-medium"
+            >
+              <Plus className="h-5 w-5" />
+              {isProcessing ? 'Dodawanie...' : 'Dodaj do inwentarza'}
+            </Button>
+          </div>
+
+          {/* Waga i jednostka w jednej linii - pod przyciskiem */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium block">Waga/Ilość</label>
               <Input
                 type="number"
                 step="0.1"
@@ -751,13 +764,14 @@ export default function InwenturaApp() {
                 onChange={(e) => setWeight(e.target.value)}
                 placeholder="1"
                 disabled={isProcessing}
+                className="w-full"
               />
             </div>
-            
-            <div>
-              <label className="text-sm font-medium">Jednostka</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium block">Jednostka</label>
               <Select value={unit} onValueChange={(value: Unit) => setUnit(value)} disabled={isProcessing}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -771,52 +785,72 @@ export default function InwenturaApp() {
             </div>
           </div>
 
-          <Button
-            onClick={handleAddItem}
-            disabled={isProcessing}
-            className="w-full flex items-center gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            {isProcessing ? 'Dodawanie...' : 'Dodaj do inwentarza'}
-          </Button>
+          {/* Pole produktu - na dole z sugestiami */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium block">Produkt</label>
+            <ProductSuggestions
+              value={product}
+              onChange={setProduct}
+              onSelect={handleProductSelect}
+              onAddNew={(name) => {
+                setNewProduct({ ...newProduct, name });
+                setShowAddProduct(true);
+              }}
+              placeholder="np. jabłko"
+              disabled={isProcessing}
+            />
+          </div>
         </CardContent>
       </Card>
 
       {/* Inventory List */}
       <Card>
         <CardHeader>
-          <CardTitle>Twój inwentarz ({inventory.length} pozycji)</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">
+            Twój inwentarz ({inventory.length} {inventory.length === 1 ? 'pozycja' : 'pozycji'})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {inventory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Twój inwentarz jest pusty. Dodaj pierwszy produkt!
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="mb-4">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Plus className="h-8 w-8" />
+                </div>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Twój inwentarz jest pusty</h3>
+              <p className="text-sm">Dodaj pierwszy produkt używając formularza powyżej!</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {inventory.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <h3 className="font-medium">{item.product.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {item.weight} {item.unit}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(item.timestamp)}
-                      </p>
+                  <div className="flex-1 min-w-0 mb-3 sm:mb-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <h3 className="font-medium text-base truncate">{item.product.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">
+                          {item.product.category}
+                        </Badge>
+                        <span className="text-sm font-medium text-primary">
+                          {item.weight} {item.unit}
+                        </span>
+                      </div>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dodano: {formatDate(item.timestamp)}
+                    </p>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{item.product.category}</Badge>
-                    <Button 
-                      size="sm" 
+
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
                       variant="ghost"
                       onClick={() => handleDeleteItem(item.id)}
+                      className="h-8 w-8 p-0"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

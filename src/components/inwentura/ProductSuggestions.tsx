@@ -328,9 +328,9 @@ export default function ProductSuggestions({
       </div>
 
       {showSuggestions && (
-        <Card 
+        <Card
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 z-50 mt-1 shadow-lg max-h-96 overflow-y-auto"
+          className="absolute top-full left-0 right-0 z-30 mt-1 shadow-lg max-h-60 overflow-y-auto border"
         >
           <CardContent className="p-0">
             {suggestions.length > 0 ? (

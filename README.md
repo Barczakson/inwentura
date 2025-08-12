@@ -1,141 +1,203 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# 📦 Aplikacja Inwentura
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+Nowoczesna aplikacja do zarządzania inwentarzem z obsługą komend głosowych, inteligentnym wyszukiwaniem produktów i eksportem danych.
 
-## ✨ Technology Stack
+## 🚀 Funkcjonalności
 
-This scaffold provides a robust foundation built with:
+### ✨ Główne funkcje
+- **🎤 Rozpoznawanie mowy** - Dodawanie produktów za pomocą komend głosowych
+- **🔍 Inteligentne wyszukiwanie** - Sugestie produktów z bazy danych Supabase (578+ produktów)
+- **🔄 Agregacja produktów** - Automatyczne sumowanie powtarzających się pozycji
+- **📊 Eksport danych** - CSV i JSON z wyborem nazwy pliku
+- **📱 Responsywny design** - Działa na wszystkich urządzeniach
+- **💾 Offline support** - Przechowywanie danych w localStorage
 
-### 🎯 Core Framework
-- **⚡ Next.js 15** - The React framework for production with App Router
-- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
-- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
+### 🎯 Nowy układ formularza
+```
+┌─────────────────────────────────────┐
+│     [+] Dodaj do inwentarza         │ ← Przycisk na górze
+└─────────────────────────────────────┘
 
-### 🧩 UI Components & Styling
-- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
-- **🎯 Lucide React** - Beautiful & consistent icon library
-- **🌈 Framer Motion** - Production-ready motion library for React
-- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
+┌─────────────────┬───────────────────┐
+│ Waga/Ilość      │ Jednostka         │ ← Pola w środku
+│ [1]             │ [kg ▼]            │
+└─────────────────┴───────────────────┘
 
-### 📋 Forms & Validation
-- **🎣 React Hook Form** - Performant forms with easy validation
-- **✅ Zod** - TypeScript-first schema validation
-
-### 🔄 State Management & Data Fetching
-- **🐻 Zustand** - Simple, scalable state management
-- **🔄 TanStack Query** - Powerful data synchronization for React
-- **🌐 Axios** - Promise-based HTTP client
-
-### 🗄️ Database & Backend
-- **🗄️ Prisma** - Next-generation Node.js and TypeScript ORM
-- **🔐 NextAuth.js** - Complete open-source authentication solution
-
-### 🎨 Advanced UI Features
-- **📊 TanStack Table** - Headless UI for building tables and datagrids
-- **🖱️ DND Kit** - Modern drag and drop toolkit for React
-- **📊 Recharts** - Redefined chart library built with React and D3
-- **🖼️ Sharp** - High performance image processing
-
-### 🌍 Internationalization & Utilities
-- **🌍 Next Intl** - Internationalization library for Next.js
-- **📅 Date-fns** - Modern JavaScript date utility library
-- **🪝 ReactUse** - Collection of essential React hooks for modern development
-
-## 🎯 Why This Scaffold?
-
-- **🏎️ Fast Development** - Pre-configured tooling and best practices
-- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
-- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
-- **📱 Responsive** - Mobile-first design principles with smooth animations
-- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
-- **🔐 Auth Included** - NextAuth.js for secure authentication flows
-- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
-- **🌍 i18n Ready** - Multi-language support with Next Intl
-- **🚀 Production Ready** - Optimized build and deployment settings
-- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+┌─────────────────────────────────────┐
+│ Produkt                             │ ← Pole z sugestiami na dole
+│ [input z listą sugestii]            │
+└─────────────────────────────────────┘
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+## 🛠️ Technologie
 
-## 🤖 Powered by Z.ai
+- **Next.js 15** - React framework z App Router
+- **TypeScript** - Typowanie statyczne
+- **Tailwind CSS** - Stylowanie
+- **shadcn/ui** - Komponenty UI
+- **Supabase** - Baza danych PostgreSQL
+- **Prisma** - ORM i migracje
+- **React Query** - Cache'owanie danych
+- **Web Speech API** - Rozpoznawanie mowy
 
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
+## 🚀 Szybki start
 
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
+### 1. Instalacja
+```bash
+git clone <repository-url>
+cd inwentura-app
+npm install
+```
 
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
+### 2. Konfiguracja
+```bash
+cp .env.example .env.local
+# Wypełnij zmienne środowiskowe Supabase
+```
 
-## 📁 Project Structure
+### 3. Uruchomienie
+```bash
+npm run dev
+# Aplikacja dostępna na http://localhost:3000
+```
+
+## 📖 Instrukcja użytkowania
+
+### 🎤 Dodawanie produktów głosowo
+1. Kliknij "Nagraj komendę głosową"
+2. Powiedz np.: "jabłko dwa kilogramy"
+3. Aplikacja wypełni formularz automatycznie
+4. Kliknij "Dodaj do inwentarza"
+
+### ✋ Dodawanie produktów ręcznie
+1. Kliknij "Dodaj do inwentarza" (przycisk na górze)
+2. Wprowadź wagę/ilość i jednostkę
+3. Wpisz nazwę produktu (pojawią się sugestie)
+4. Wybierz produkt z listy
+
+### 🔄 Agregacja produktów
+Gdy dodajesz produkt który już istnieje:
+- Aplikacja zapyta: "Dodać do istniejącej pozycji?"
+- **TAK** → ilości zostaną zsumowane
+- **NIE** → utworzona zostanie nowa pozycja
+
+### 📤 Eksport danych
+- **CSV** - Format z kategoriami, ID i ilościami
+- **JSON** - Pełne dane z timestampami
+- **Wybór nazwy pliku** - Aplikacja pyta o nazwę przed pobraniem
+
+## 📊 Format eksportu CSV
+
+```csv
+L.p.,Nr indeksu,Nazwa towaru,Ilość,JMZ
+PRODUKCJA,,,,
+1,20014,Andruty,0.5,kg
+2,20016,Baileys,0.7,l
+PÓŁPRODUKTY,,,,
+3,11447,p. BESZAMEL SZPARAGOWY 1kg,2.5,kg
+SUROWCE,,,,
+4,398,owoce jabłka,2,kg
+5,234,warzywa marchew,0.4,kg
+```
+
+## 🔧 API Endpoints
+
+### Produkty
+- `GET /api/inwentura/products/search?q={query}` - Wyszukiwanie
+- `GET /api/inwentura/products/popular?limit={n}` - Popularne
+- `GET /api/inwentura/products/categories` - Kategorie
+- `GET /api/inwentura/products/all` - Wszystkie produkty
+
+### Inwentarz
+- `GET /api/inwentura/items/list?user={userId}` - Lista pozycji
+- `POST /api/inwentura/items/add` - Dodanie pozycji
+- `DELETE /api/inwentura/items/{id}` - Usunięcie pozycji
+
+## 📱 Responsywność
+
+### 📱 Telefony (< 640px)
+- Przyciski w siatce 2x2
+- Formularz pionowy
+- Pełne nazwy przycisków
+
+### 📟 Tablety (640px - 1024px)
+- Przyciski w linii poziomej
+- Mieszany układ formularza
+- Optymalne wykorzystanie przestrzeni
+
+### 🖥️ Desktopy (> 1024px)
+- Pełny poziomy układ
+- Maksymalna efektywność
+- Wszystkie funkcje widoczne
+
+## 🔍 Funkcje wyszukiwania
+
+### Inteligentne dopasowanie
+- **Dokładne**: "jabłko" → "jabłko"
+- **Częściowe**: "jabł" → "owoce jabłka"
+- **Kategorialne**: "owoce" → wszystkie produkty z kategorii
+
+### Cache'owanie
+- **Wyniki wyszukiwania**: 1 minuta
+- **Popularne produkty**: 5 minut
+- **Kategorie**: 10 minut
+
+## 🐛 Rozwiązywanie problemów
+
+### Brak rozpoznawania mowy
+- Sprawdź obsługę Web Speech API w przeglądarce
+- Upewnij się o połączeniu internetowym
+- Sprawdź uprawnienia mikrofonu
+
+### Problemy z bazą danych
+- Sprawdź zmienne środowiskowe w `.env.local`
+- Uruchom migracje: `npx prisma migrate dev`
+- Sprawdź połączenie z Supabase
+
+### Problemy z wydajnością
+- Wyczyść cache przeglądarki
+- Sprawdź Network tab w DevTools
+- Zrestartuj serwer: `npm run dev`
+
+## 📁 Struktura projektu
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-├── components/          # Reusable React components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and configurations
+├── app/api/inwentura/     # API endpoints
+├── components/inwentura/  # Komponenty React
+├── lib/inwentura/         # Logika biznesowa
+└── types/                 # Definicje TypeScript
 ```
 
-## 🎨 Available Features & Components
+## 📝 Najnowsze zmiany
 
-This scaffold includes a comprehensive set of modern web development tools:
+### v1.0.0 (2024-01-12)
+- ✅ **Nowy układ formularza** - przycisk "Dodaj" na górze
+- ✅ **Wybór nazwy pliku** przy eksporcie CSV/JSON
+- ✅ **Naprawiona responsywność** - lista sugestii nie zasłania przycisku
+- ✅ **Usunięto przycisk "Testuj parser"** - czystszy interfejs
+- ✅ **Poprawione ID produktów** - prawdziwe ID z bazy Supabase
+- ✅ **Agregacja produktów** - automatyczne sumowanie duplikatów
 
-### 🧩 UI Components (shadcn/ui)
-- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
-- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
-- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
-- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
-- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
-- **Data Display**: Badge, Avatar, Calendar
+## 🤝 Wkład w projekt
 
-### 📊 Advanced Data Features
-- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
-- **Charts**: Beautiful visualizations with Recharts
-- **Forms**: Type-safe forms with React Hook Form + Zod validation
+1. Fork repozytorium
+2. Utwórz branch: `git checkout -b feature/nazwa-funkcji`
+3. Commit zmian: `git commit -m 'Dodaj nową funkcję'`
+4. Push do branch: `git push origin feature/nazwa-funkcji`
+5. Utwórz Pull Request
 
-### 🎨 Interactive Features
-- **Animations**: Smooth micro-interactions with Framer Motion
-- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
-- **Theme Switching**: Built-in dark/light mode support
+## 📄 Licencja
 
-### 🔐 Backend Integration
-- **Authentication**: Ready-to-use auth flows with NextAuth.js
-- **Database**: Type-safe database operations with Prisma
-- **API Client**: HTTP requests with Axios + TanStack Query
-- **State Management**: Simple and scalable with Zustand
+MIT License
 
-### 🌍 Production Features
-- **Internationalization**: Multi-language support with Next Intl
-- **Image Optimization**: Automatic image processing with Sharp
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
+## 👥 Autorzy
 
-## 🤝 Get Started with Z.ai
-
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+- **Główny deweloper** - Implementacja i design
+- **Augment Agent** - AI Assistant dla rozwoju
 
 ---
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+**Aplikacja Inwentura** - Nowoczesne zarządzanie inwentarzem z AI 🚀
+
+📖 **[Pełna dokumentacja](DOKUMENTACJA_APLIKACJI.md)** | 🐛 **[Rozwiązywanie problemów](DOKUMENTACJA_APLIKACJI.md#-rozwiązywanie-problemów)**
